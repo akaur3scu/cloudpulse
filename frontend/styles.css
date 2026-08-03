@@ -107,6 +107,72 @@ main {
     background: #7f1d1d;
 }
 
+.monitor-form-section {
+    margin-bottom: 35px;
+    padding: 24px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+}
+
+.monitor-form-section h2 {
+    margin-top: 0;
+    margin-bottom: 6px;
+}
+
+.monitor-form-section > div > p {
+    margin-top: 0;
+    color: #94a3b8;
+}
+
+#monitor-form {
+    display: grid;
+    grid-template-columns: 1fr 2fr auto;
+    align-items: end;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.form-field label {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.form-field input {
+    width: 100%;
+    padding: 11px;
+    color: #e2e8f0;
+    background: #0f172a;
+    border: 1px solid #475569;
+    border-radius: 8px;
+}
+
+.form-field input:focus {
+    outline: 2px solid #38bdf8;
+    border-color: transparent;
+}
+
+#form-message {
+    min-height: 20px;
+    margin-bottom: 0;
+    color: #86efac;
+}
+
+#form-message.error-message {
+    color: #fca5a5;
+}
+
+.pending {
+    color: #fde68a;
+    background: #713f12;
+}
+
 @media (max-width: 700px) {
     .summary,
     .service-grid {

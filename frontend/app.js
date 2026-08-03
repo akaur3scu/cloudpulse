@@ -31,9 +31,16 @@ function displayServices() {
         card.className = "service-card";
 
         const responseTime =
-            service.responseTime === null
-                ? "Unavailable"
-                : `${service.responseTime} ms`;
+            service.status === "pending"
+                ? "Not checked yet"
+                : service.responseTime === null
+                    ? "Unavailable"
+                    : `${service.responseTime} ms`;
+
+        const uptime =
+            service.uptime === null
+                ? "Not calculated"
+                : `${service.uptime}%`;
 
         card.innerHTML = `
             <span class="status ${service.status}">
@@ -42,7 +49,7 @@ function displayServices() {
             <h3>${service.name}</h3>
             <p>${service.url}</p>
             <p><strong>Response time:</strong> ${responseTime}</p>
-            <p><strong>Uptime:</strong> ${service.uptime}%</p>
+            <p><strong>Uptime:</strong> ${uptime}</p>
         `;
 
         serviceList.appendChild(card);
@@ -66,8 +73,80 @@ function updateSummary() {
         services.length - onlineCount;
 }
 
+function handleFormSubmission(event) {
+    event.preventDefault();
+
+    const nameInput = document.querySelector("#service-name");
+    const urlInput = document.querySelector("#service-url");
+    const formMessage = document.querySelector("#form-message");
+
+    const name = nameInput.value.trim();
+    const url = urlInput.value.trim();
+
+    formMessage.classList.remove("error-message");
+
+    if (!name || !url) {
+        formMessage.textContent =
+            "Please provide both a service name and URL.";
+        formMessage.classList.add("error-message");
+        return;
+    }
+
+    let parsedUrl;
+
+    try {
+        parsedUrl = new URL(url);
+    } catch {
+        formMessage.textContent =
+            "Please enter a valid URL, including https://";
+        formMessage.classList.add("error-message");
+        return;
+    }
+
+    if (
+        parsedUrl.protocol !== "http:" &&
+        parsedUrl.protocol !== "https:"
+    ) {
+        formMessage.textContent =
+            "CloudPulse only supports HTTP and HTTPS URLs.";
+        formMessage.classList.add("error-message");
+        return;
+    }
+
+    const alreadyExists = services.some(
+        (service) => service.url === parsedUrl.href
+    );
+
+    if (alreadyExists) {
+        formMessage.textContent =
+            "That website is already being monitored.";
+        formMessage.classList.add("error-message");
+        return;
+    }
+
+    services.push({
+        name: name,
+        url: parsedUrl.href,
+        status: "pending",
+        responseTime: null,
+        uptime: null
+    });
+
+    displayServices();
+
+    document.querySelector("#monitor-form").reset();
+
+    formMessage.textContent =
+        `${name} was successfully added to CloudPulse.`;
+}
+
+
 document
     .querySelector("#refresh-button")
     .addEventListener("click", displayServices);
+
+document
+    .querySelector("#monitor-form")
+    .addEventListener("submit", handleFormSubmission);
 
 displayServices();

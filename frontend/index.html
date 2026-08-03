@@ -21,6 +21,41 @@
     </header>
 
     <main>
+        <section class="monitor-form-section">
+            <div>
+                <h2>Monitor a website</h2>
+                <p>Add a website or API endpoint to your dashboard.</p>
+            </div>
+        
+            <form id="monitor-form">
+                <div class="form-field">
+                    <label for="service-name">Service name</label>
+                    <input
+                        id="service-name"
+                        name="serviceName"
+                        type="text"
+                        placeholder="Example Website"
+                        required
+                    >
+                </div>
+        
+                <div class="form-field">
+                    <label for="service-url">Website URL</label>
+                    <input
+                        id="service-url"
+                        name="serviceUrl"
+                        type="url"
+                        placeholder="https://example.com"
+                        required
+                    >
+                </div>
+        
+                <button type="submit">Add monitor</button>
+            </form>
+        
+            <p id="form-message" aria-live="polite"></p>
+        </section>
+        
         <section class="summary">
             <div class="summary-card">
                 <span>Total services</span>
