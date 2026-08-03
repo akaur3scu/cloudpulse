@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+    <title>CloudPulse</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <header>
+        <div>
+            <h1>CloudPulse</h1>
+            <p>Website uptime and performance monitoring</p>
+        </div>
+
+        <button id="refresh-button">Refresh</button>
+    </header>
+
+    <main>
+        <section class="summary">
+            <div class="summary-card">
+                <span>Total services</span>
+                <strong id="total-services">0</strong>
+            </div>
+
+            <div class="summary-card">
+                <span>Online</span>
+                <strong id="online-services">0</strong>
+            </div>
+
+            <div class="summary-card">
+                <span>Offline</span>
+                <strong id="offline-services">0</strong>
+            </div>
+        </section>
+
+        <section>
+            <h2>Monitored services</h2>
+            <div id="service-list" class="service-grid"></div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html
