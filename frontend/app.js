@@ -1,55 +1,132 @@
 const services = [
     {
         name: "Example Website",
-        url: "https://example.com",
-        status: "online",
-        responseTime: 146,
-        uptime: 99.9
+        url: "https://example.com/",
+        history: [
+            { status: "online", responseTime: 140 },
+            { status: "online", responseTime: 152 },
+            { status: "online", responseTime: 135 },
+            { status: "online", responseTime: 148 }
+        ]
     },
     {
         name: "GitHub",
-        url: "https://github.com",
-        status: "online",
-        responseTime: 203,
-        uptime: 99.8
+        url: "https://github.com/",
+        history: [
+            { status: "online", responseTime: 205 },
+            { status: "online", responseTime: 192 },
+            { status: "offline", responseTime: null },
+            { status: "online", responseTime: 198 }
+        ]
     },
     {
         name: "Test API",
-        url: "https://test-api.example",
-        status: "offline",
-        responseTime: null,
-        uptime: 92.4
+        url: "https://test-api.example/",
+        history: [
+            { status: "online", responseTime: 310 },
+            { status: "offline", responseTime: null },
+            { status: "offline", responseTime: null },
+            { status: "online", responseTime: 287 }
+        ]
     }
 ];
+
+function calculateMetrics(service) {
+    const totalChecks = service.history.length;
+
+    if (totalChecks === 0) {
+        return {
+            status: "pending",
+            latestResponseTime: null,
+            averageResponseTime: null,
+            uptime: null,
+            totalChecks: 0
+        };
+    }
+
+    const latestCheck = service.history[totalChecks - 1];
+
+    const successfulChecks = service.history.filter(
+        (check) => check.status === "online"
+    );
+
+    const uptime = (
+        (successfulChecks.length / totalChecks) *
+        100
+    ).toFixed(1);
+
+    const responseTimes = successfulChecks
+        .map((check) => check.responseTime)
+        .filter((responseTime) => responseTime !== null);
+
+    const averageResponseTime =
+        responseTimes.length === 0
+            ? null
+            : Math.round(
+                responseTimes.reduce(
+                    (total, responseTime) => total + responseTime,
+                    0
+                ) / responseTimes.length
+            );
+
+    return {
+        status: latestCheck.status,
+        latestResponseTime: latestCheck.responseTime,
+        averageResponseTime: averageResponseTime,
+        uptime: uptime,
+        totalChecks: totalChecks
+    };
+}
 
 function displayServices() {
     const serviceList = document.querySelector("#service-list");
     serviceList.innerHTML = "";
 
     services.forEach((service) => {
+        const metrics = calculateMetrics(service);
         const card = document.createElement("article");
+
         card.className = "service-card";
 
-        const responseTime =
-            service.status === "pending"
+        const latestResponse =
+            metrics.status === "pending"
                 ? "Not checked yet"
-                : service.responseTime === null
+                : metrics.latestResponseTime === null
                     ? "Unavailable"
-                    : `${service.responseTime} ms`;
+                    : `${metrics.latestResponseTime} ms`;
+
+        const averageResponse =
+            metrics.averageResponseTime === null
+                ? "Not available"
+                : `${metrics.averageResponseTime} ms`;
 
         const uptime =
-            service.uptime === null
+            metrics.uptime === null
                 ? "Not calculated"
-                : `${service.uptime}%`;
+                : `${metrics.uptime}%`;
 
         card.innerHTML = `
-            <span class="status ${service.status}">
-                ${service.status.toUpperCase()}
+            <span class="status ${metrics.status}">
+                ${metrics.status.toUpperCase()}
             </span>
             <h3>${service.name}</h3>
             <p>${service.url}</p>
-            <p><strong>Response time:</strong> ${responseTime}</p>
-            <p><strong>Uptime:</strong> ${uptime}</p>
+            <p>
+                <strong>Latest response:</strong>
+                ${latestResponse}
+            </p>
+            <p>
+                <strong>Average response:</strong>
+                ${averageResponse}
+            </p>
+            <p>
+                <strong>Uptime:</strong>
+                ${uptime}
+            </p>
+            <p>
+                <strong>Total checks:</strong>
+                ${metrics.totalChecks}
+            </p>
         `;
 
         serviceList.appendChild(card);
@@ -59,8 +136,16 @@ function displayServices() {
 }
 
 function updateSummary() {
-    const onlineCount = services.filter(
-        (service) => service.status === "online"
+    const statuses = services.map(
+        (service) => calculateMetrics(service).status
+    );
+
+    const onlineCount = statuses.filter(
+        (status) => status === "online"
+    ).length;
+
+    const offlineCount = statuses.filter(
+        (status) => status === "offline"
     ).length;
 
     document.querySelector("#total-services").textContent =
@@ -70,7 +155,7 @@ function updateSummary() {
         onlineCount;
 
     document.querySelector("#offline-services").textContent =
-        services.length - onlineCount;
+        offlineCount;
 }
 
 function handleFormSubmission(event) {
@@ -127,23 +212,54 @@ function handleFormSubmission(event) {
     services.push({
         name: name,
         url: parsedUrl.href,
-        status: "pending",
-        responseTime: null,
-        uptime: null
+        history: []
     });
 
     displayServices();
-
     document.querySelector("#monitor-form").reset();
 
     formMessage.textContent =
         `${name} was successfully added to CloudPulse.`;
 }
 
+function simulateCheck(service) {
+    // Temporary simulation until the Python backend is connected.
+    const isOnline = Math.random() > 0.2;
+
+    const check = {
+        status: isOnline ? "online" : "offline",
+        responseTime: isOnline
+            ? Math.floor(Math.random() * 350) + 75
+            : null
+    };
+
+    service.history.push(check);
+
+    // Keep only the 20 most recent checks.
+    if (service.history.length > 20) {
+        service.history.shift();
+    }
+}
+
+function refreshServices() {
+    const refreshButton =
+        document.querySelector("#refresh-button");
+
+    refreshButton.disabled = true;
+    refreshButton.textContent = "Checking...";
+
+    services.forEach(simulateCheck);
+
+    setTimeout(() => {
+        displayServices();
+        refreshButton.disabled = false;
+        refreshButton.textContent = "Refresh";
+    }, 500);
+}
 
 document
     .querySelector("#refresh-button")
-    .addEventListener("click", displayServices);
+    .addEventListener("click", refreshServices);
 
 document
     .querySelector("#monitor-form")
