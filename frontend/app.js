@@ -1,4 +1,4 @@
-const services = [
+const defaultServices = [
     {
         name: "Example Website",
         url: "https://example.com/",
@@ -30,6 +30,41 @@ const services = [
         ]
     }
 ];
+
+function copyDefaultServices() {
+    return JSON.parse(JSON.stringify(defaultServices));
+}
+
+function loadServices() {
+    const savedServices =
+        localStorage.getItem("cloudpulse-services");
+
+    if (savedServices === null) {
+        return copyDefaultServices();
+    }
+
+    try {
+        const parsedServices = JSON.parse(savedServices);
+
+        if (!Array.isArray(parsedServices)) {
+            return copyDefaultServices();
+        }
+
+        return parsedServices;
+    } catch (error) {
+        console.error("Could not load saved services:", error);
+        return copyDefaultServices();
+    }
+}
+
+function saveServices() {
+    localStorage.setItem(
+        "cloudpulse-services",
+        JSON.stringify(services)
+    );
+}
+
+let services = loadServices();
 
 function calculateMetrics(service) {
     const totalChecks = service.history.length;
@@ -214,8 +249,10 @@ function handleFormSubmission(event) {
         url: parsedUrl.href,
         history: []
     });
-
+    
+    saveServices();
     displayServices();
+
     document.querySelector("#monitor-form").reset();
 
     formMessage.textContent =
@@ -249,6 +286,7 @@ function refreshServices() {
     refreshButton.textContent = "Checking...";
 
     services.forEach(simulateCheck);
+    saveServices();
 
     setTimeout(() => {
         displayServices();
