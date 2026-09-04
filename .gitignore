@@ -203,6 +203,13 @@ cython_debug/
 # Temporary file for partial code execution
 tempCodeRunnerFile.py
 
+# CloudPulse local and Terraform state
+cloudpulse.db
+*.tfstate
+*.tfstate.*
+.terraform/
+*.zip
+
 # Ruff stuff:
 .ruff_cache/
 

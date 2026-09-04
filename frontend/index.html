@@ -2,83 +2,77 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-    <title>CloudPulse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CloudPulse monitors endpoint uptime and latency.">
+    <title>CloudPulse · Uptime monitoring</title>
     <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
-    <header>
-        <div>
-            <h1>CloudPulse</h1>
-            <p>Website uptime and performance monitoring</p>
+    <header class="site-header">
+        <a class="brand" href="/" aria-label="CloudPulse home">
+            <span class="brand-mark" aria-hidden="true">CP</span>
+            <span>
+                <strong>CloudPulse</strong>
+                <small>Uptime monitoring</small>
+            </span>
+        </a>
+        <div class="header-actions">
+            <span id="last-updated">Not checked yet</span>
+            <button id="refresh-button" type="button">Run checks</button>
         </div>
-
-        <button id="refresh-button">Refresh</button>
     </header>
 
     <main>
-        <section class="monitor-form-section">
+        <section class="hero">
             <div>
-                <h2>Monitor a website</h2>
-                <p>Add a website or API endpoint to your dashboard.</p>
+                <p class="eyebrow">SERVERLESS OBSERVABILITY</p>
+                <h1>Know when your services need attention.</h1>
+                <p class="hero-copy">
+                    Track availability, HTTP status, and response times from one dashboard.
+                </p>
             </div>
-        
-            <form id="monitor-form">
+            <form id="monitor-form" class="monitor-form">
+                <h2>Add an endpoint</h2>
                 <div class="form-field">
                     <label for="service-name">Service name</label>
-                    <input
-                        id="service-name"
-                        name="serviceName"
-                        type="text"
-                        placeholder="Example Website"
-                        required
-                    >
+                    <input id="service-name" name="serviceName" type="text"
+                           maxlength="80" placeholder="Portfolio" required>
                 </div>
-        
                 <div class="form-field">
-                    <label for="service-url">Website URL</label>
-                    <input
-                        id="service-url"
-                        name="serviceUrl"
-                        type="url"
-                        placeholder="https://example.com"
-                        required
-                    >
+                    <label for="service-url">Public URL</label>
+                    <input id="service-url" name="serviceUrl" type="url"
+                           placeholder="https://example.com" required>
                 </div>
-        
                 <button type="submit">Add monitor</button>
+                <p id="form-message" class="form-message" aria-live="polite"></p>
             </form>
-        
-            <p id="form-message" aria-live="polite"></p>
-        </section>
-        
-        <section class="summary">
-            <div class="summary-card">
-                <span>Total services</span>
-                <strong id="total-services">0</strong>
-            </div>
-
-            <div class="summary-card">
-                <span>Online</span>
-                <strong id="online-services">0</strong>
-            </div>
-
-            <div class="summary-card">
-                <span>Offline</span>
-                <strong id="offline-services">0</strong>
-            </div>
         </section>
 
-        <section>
-            <h2>Monitored services</h2>
+        <section class="summary" aria-label="Monitoring summary">
+            <article class="summary-card">
+                <span>Total services</span><strong id="total-services">0</strong>
+            </article>
+            <article class="summary-card summary-online">
+                <span>Online</span><strong id="online-services">0</strong>
+            </article>
+            <article class="summary-card summary-offline">
+                <span>Offline</span><strong id="offline-services">0</strong>
+            </article>
+            <article class="summary-card">
+                <span>Average latency</span><strong id="average-latency">—</strong>
+            </article>
+        </section>
+
+        <section class="services-section">
+            <div class="section-heading">
+                <div><p class="eyebrow">LIVE STATUS</p><h2>Monitored services</h2></div>
+                <span id="api-status" class="api-status">Connecting…</span>
+            </div>
             <div id="service-list" class="service-grid"></div>
         </section>
     </main>
 
+    <footer>Built with Python, SQLite, AWS Lambda, DynamoDB, and Terraform.</footer>
     <script src="app.js"></script>
 </body>
-</html
+</html>

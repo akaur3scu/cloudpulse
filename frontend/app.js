@@ -1,306 +1,181 @@
-const defaultServices = [
-    {
-        name: "Example Website",
-        url: "https://example.com/",
-        history: [
-            { status: "online", responseTime: 140 },
-            { status: "online", responseTime: 152 },
-            { status: "online", responseTime: 135 },
-            { status: "online", responseTime: 148 }
-        ]
-    },
-    {
-        name: "GitHub",
-        url: "https://github.com/",
-        history: [
-            { status: "online", responseTime: 205 },
-            { status: "online", responseTime: 192 },
-            { status: "offline", responseTime: null },
-            { status: "online", responseTime: 198 }
-        ]
-    },
-    {
-        name: "Test API",
-        url: "https://test-api.example/",
-        history: [
-            { status: "online", responseTime: 310 },
-            { status: "offline", responseTime: null },
-            { status: "offline", responseTime: null },
-            { status: "online", responseTime: 287 }
-        ]
-    }
-];
+const API_BASE = "/api";
+let services = [];
 
-function copyDefaultServices() {
-    return JSON.parse(JSON.stringify(defaultServices));
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
 }
-
-function loadServices() {
-    const savedServices =
-        localStorage.getItem("cloudpulse-services");
-
-    if (savedServices === null) {
-        return copyDefaultServices();
-    }
-
-    try {
-        const parsedServices = JSON.parse(savedServices);
-
-        if (!Array.isArray(parsedServices)) {
-            return copyDefaultServices();
-        }
-
-        return parsedServices;
-    } catch (error) {
-        console.error("Could not load saved services:", error);
-        return copyDefaultServices();
-    }
-}
-
-function saveServices() {
-    localStorage.setItem(
-        "cloudpulse-services",
-        JSON.stringify(services)
-    );
-}
-
-let services = loadServices();
 
 function calculateMetrics(service) {
-    const totalChecks = service.history.length;
-
-    if (totalChecks === 0) {
-        return {
-            status: "pending",
-            latestResponseTime: null,
-            averageResponseTime: null,
-            uptime: null,
-            totalChecks: 0
-        };
+    const history = service.history ?? [];
+    if (history.length === 0) {
+        return { status: "pending", latest: null, average: null, uptime: null };
     }
-
-    const latestCheck = service.history[totalChecks - 1];
-
-    const successfulChecks = service.history.filter(
-        (check) => check.status === "online"
-    );
-
-    const uptime = (
-        (successfulChecks.length / totalChecks) *
-        100
-    ).toFixed(1);
-
-    const responseTimes = successfulChecks
-        .map((check) => check.responseTime)
-        .filter((responseTime) => responseTime !== null);
-
-    const averageResponseTime =
-        responseTimes.length === 0
-            ? null
-            : Math.round(
-                responseTimes.reduce(
-                    (total, responseTime) => total + responseTime,
-                    0
-                ) / responseTimes.length
-            );
-
+    const successful = history.filter((check) => check.status === "online");
+    const times = successful
+        .map((check) => check.response_time_ms)
+        .filter((time) => Number.isFinite(time));
     return {
-        status: latestCheck.status,
-        latestResponseTime: latestCheck.responseTime,
-        averageResponseTime: averageResponseTime,
-        uptime: uptime,
-        totalChecks: totalChecks
+        status: history.at(-1).status,
+        latest: history.at(-1).response_time_ms,
+        average: times.length
+            ? Math.round(times.reduce((sum, time) => sum + time, 0) / times.length)
+            : null,
+        uptime: ((successful.length / history.length) * 100).toFixed(1)
     };
 }
 
-function displayServices() {
-    const serviceList = document.querySelector("#service-list");
-    serviceList.innerHTML = "";
+function valueOrDash(value, suffix = "") {
+    return value === null || value === undefined ? "—" : `${value}${suffix}`;
+}
 
-    services.forEach((service) => {
-        const metrics = calculateMetrics(service);
-        const card = document.createElement("article");
-
-        card.className = "service-card";
-
-        const latestResponse =
-            metrics.status === "pending"
-                ? "Not checked yet"
-                : metrics.latestResponseTime === null
-                    ? "Unavailable"
-                    : `${metrics.latestResponseTime} ms`;
-
-        const averageResponse =
-            metrics.averageResponseTime === null
-                ? "Not available"
-                : `${metrics.averageResponseTime} ms`;
-
-        const uptime =
-            metrics.uptime === null
-                ? "Not calculated"
-                : `${metrics.uptime}%`;
-
-        card.innerHTML = `
-            <span class="status ${metrics.status}">
-                ${metrics.status.toUpperCase()}
-            </span>
-            <h3>${service.name}</h3>
-            <p>${service.url}</p>
-            <p>
-                <strong>Latest response:</strong>
-                ${latestResponse}
-            </p>
-            <p>
-                <strong>Average response:</strong>
-                ${averageResponse}
-            </p>
-            <p>
-                <strong>Uptime:</strong>
-                ${uptime}
-            </p>
-            <p>
-                <strong>Total checks:</strong>
-                ${metrics.totalChecks}
-            </p>
-        `;
-
-        serviceList.appendChild(card);
-    });
-
+function renderServices() {
+    const list = document.querySelector("#service-list");
+    if (services.length === 0) {
+        list.innerHTML = '<div class="empty-state">No endpoints yet. Add your first monitor above.</div>';
+    } else {
+        list.innerHTML = services.map((service) => {
+            const metrics = calculateMetrics(service);
+            const history = service.history ?? [];
+            const bars = history.length
+                ? `<div class="history" title="Last ${history.length} checks">${history.map(
+                    (check) => `<span class="${check.status === "online" ? "" : "failed"}"></span>`
+                ).join("")}</div>`
+                : '<span class="history-empty">Waiting for the first check</span>';
+            return `
+                <article class="service-card">
+                    <div class="card-top">
+                        <span class="status ${metrics.status}">${metrics.status.toUpperCase()}</span>
+                        <button class="delete-button" data-id="${service.id}" type="button">Remove</button>
+                    </div>
+                    <h3>${escapeHtml(service.name)}</h3>
+                    <a class="service-url" href="${escapeHtml(service.url)}" target="_blank" rel="noopener noreferrer">
+                        ${escapeHtml(service.url)}
+                    </a>
+                    <div class="metrics">
+                        <div class="metric"><span>Latest</span><strong>${valueOrDash(metrics.latest, " ms")}</strong></div>
+                        <div class="metric"><span>Average</span><strong>${valueOrDash(metrics.average, " ms")}</strong></div>
+                        <div class="metric"><span>Recent uptime</span><strong>${valueOrDash(metrics.uptime, "%")}</strong></div>
+                    </div>
+                    ${bars}
+                </article>`;
+        }).join("");
+    }
     updateSummary();
 }
 
 function updateSummary() {
-    const statuses = services.map(
-        (service) => calculateMetrics(service).status
-    );
-
-    const onlineCount = statuses.filter(
-        (status) => status === "online"
-    ).length;
-
-    const offlineCount = statuses.filter(
-        (status) => status === "offline"
-    ).length;
-
-    document.querySelector("#total-services").textContent =
-        services.length;
-
-    document.querySelector("#online-services").textContent =
-        onlineCount;
-
-    document.querySelector("#offline-services").textContent =
-        offlineCount;
+    const metrics = services.map(calculateMetrics);
+    const online = metrics.filter((item) => item.status === "online").length;
+    const offline = metrics.filter((item) => item.status === "offline").length;
+    const latencies = metrics.map((item) => item.latest).filter(Number.isFinite);
+    const average = latencies.length
+        ? Math.round(latencies.reduce((sum, value) => sum + value, 0) / latencies.length)
+        : null;
+    document.querySelector("#total-services").textContent = services.length;
+    document.querySelector("#online-services").textContent = online;
+    document.querySelector("#offline-services").textContent = offline;
+    document.querySelector("#average-latency").textContent = valueOrDash(average, " ms");
 }
 
-function handleFormSubmission(event) {
-    event.preventDefault();
+function setConnectionStatus(message, isError = false) {
+    const status = document.querySelector("#api-status");
+    status.textContent = message;
+    status.classList.toggle("error", isError);
+}
 
-    const nameInput = document.querySelector("#service-name");
-    const urlInput = document.querySelector("#service-url");
-    const formMessage = document.querySelector("#form-message");
+function showFormMessage(message, isError = false) {
+    const element = document.querySelector("#form-message");
+    element.textContent = message;
+    element.classList.toggle("error", isError);
+}
 
-    const name = nameInput.value.trim();
-    const url = urlInput.value.trim();
-
-    formMessage.classList.remove("error-message");
-
-    if (!name || !url) {
-        formMessage.textContent =
-            "Please provide both a service name and URL.";
-        formMessage.classList.add("error-message");
-        return;
-    }
-
-    let parsedUrl;
-
-    try {
-        parsedUrl = new URL(url);
-    } catch {
-        formMessage.textContent =
-            "Please enter a valid URL, including https://";
-        formMessage.classList.add("error-message");
-        return;
-    }
-
-    if (
-        parsedUrl.protocol !== "http:" &&
-        parsedUrl.protocol !== "https:"
-    ) {
-        formMessage.textContent =
-            "CloudPulse only supports HTTP and HTTPS URLs.";
-        formMessage.classList.add("error-message");
-        return;
-    }
-
-    const alreadyExists = services.some(
-        (service) => service.url === parsedUrl.href
-    );
-
-    if (alreadyExists) {
-        formMessage.textContent =
-            "That website is already being monitored.";
-        formMessage.classList.add("error-message");
-        return;
-    }
-
-    services.push({
-        name: name,
-        url: parsedUrl.href,
-        history: []
+async function apiRequest(path, options = {}) {
+    const response = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers: { "Content-Type": "application/json", ...(options.headers ?? {}) }
     });
-    
-    saveServices();
-    displayServices();
-
-    document.querySelector("#monitor-form").reset();
-
-    formMessage.textContent =
-        `${name} was successfully added to CloudPulse.`;
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error ?? `Request failed (${response.status}).`);
+    return payload;
 }
 
-function simulateCheck(service) {
-    // Temporary simulation until the Python backend is connected.
-    const isOnline = Math.random() > 0.2;
-
-    const check = {
-        status: isOnline ? "online" : "offline",
-        responseTime: isOnline
-            ? Math.floor(Math.random() * 350) + 75
-            : null
-    };
-
-    service.history.push(check);
-
-    // Keep only the 20 most recent checks.
-    if (service.history.length > 20) {
-        service.history.shift();
+async function loadServices() {
+    try {
+        const payload = await apiRequest("/endpoints");
+        services = payload.services;
+        renderServices();
+        setConnectionStatus("API connected");
+    } catch (error) {
+        setConnectionStatus("API unavailable", true);
+        document.querySelector("#service-list").innerHTML =
+            `<div class="empty-state">${escapeHtml(error.message)} Start CloudPulse with <code>python -m backend.server</code>.</div>`;
     }
 }
 
-function refreshServices() {
-    const refreshButton =
-        document.querySelector("#refresh-button");
-
-    refreshButton.disabled = true;
-    refreshButton.textContent = "Checking...";
-
-    services.forEach(simulateCheck);
-    saveServices();
-
-    setTimeout(() => {
-        displayServices();
-        refreshButton.disabled = false;
-        refreshButton.textContent = "Refresh";
-    }, 500);
+async function addMonitor(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const submitButton = form.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    showFormMessage("Checking endpoint…");
+    try {
+        await apiRequest("/endpoints", {
+            method: "POST",
+            body: JSON.stringify({
+                name: document.querySelector("#service-name").value.trim(),
+                url: document.querySelector("#service-url").value.trim()
+            })
+        });
+        form.reset();
+        showFormMessage("Monitor added successfully.");
+        await loadServices();
+    } catch (error) {
+        showFormMessage(error.message, true);
+    } finally {
+        submitButton.disabled = false;
+    }
 }
 
-document
-    .querySelector("#refresh-button")
-    .addEventListener("click", refreshServices);
+async function runChecks() {
+    const button = document.querySelector("#refresh-button");
+    button.disabled = true;
+    button.textContent = "Checking…";
+    try {
+        const payload = await apiRequest("/checks/run", { method: "POST" });
+        services = payload.services;
+        renderServices();
+        document.querySelector("#last-updated").textContent =
+            `Updated ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+        setConnectionStatus("API connected");
+    } catch (error) {
+        setConnectionStatus(error.message, true);
+    } finally {
+        button.disabled = false;
+        button.textContent = "Run checks";
+    }
+}
 
-document
-    .querySelector("#monitor-form")
-    .addEventListener("submit", handleFormSubmission);
+async function removeMonitor(endpointId) {
+    if (!window.confirm("Remove this monitor and its check history?")) return;
+    try {
+        await apiRequest(`/endpoints/${encodeURIComponent(endpointId)}`, { method: "DELETE" });
+        services = services.filter((service) => service.id !== endpointId);
+        renderServices();
+    } catch (error) {
+        setConnectionStatus(error.message, true);
+    }
+}
 
-displayServices();
+document.querySelector("#monitor-form").addEventListener("submit", addMonitor);
+document.querySelector("#refresh-button").addEventListener("click", runChecks);
+document.querySelector("#service-list").addEventListener("click", (event) => {
+    const button = event.target.closest(".delete-button");
+    if (button) removeMonitor(button.dataset.id);
+});
+
+loadServices();
